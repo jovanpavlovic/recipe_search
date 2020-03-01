@@ -1,146 +1,120 @@
+import * as imported from './modules.js'
+const {appId, appKey, Image, Title, Calories, Label, Recipe, Labels} = imported;
 
-var appId = "fc57baf5";
-var appKey = "a604c27d9fd27b5ace8ec622c5022c02";
+const diet = document.querySelector(".diet");
+const health = document.querySelector(".health");
+const searchFood = document.querySelector(".keyword-input");
+const recipesSection = document.querySelector("#recipes");
+const calValues = document.querySelectorAll(".cal");
 
-var diet = document.querySelector(".diet");
-var health = document.querySelector(".health");
-var searchFood = document.querySelector(".keyword-input");
-var recipesSection = document.querySelector("#recipes");
-var calValues = document.querySelectorAll(".cal");
+let dietValue = '';
+let healthValue = '';
+let cal1Value = '';
+let cal2Value = '';
+let calVal = '';
 
-var dietValue = '';
-var healthValue = '';
-var c1Value = '';
-var c2Value = '';
+class Url{
 
-function getRecipes(searchValue) {
-	var request = new XMLHttpRequest();
-
-	console.log(searchValue);
-
-	var requestURL = 'https://api.edamam.com/search?q=' + searchValue + '&app_id=' + appId + '&app_key=' + appKey + "&from=0&to=12";
-	var cValue;
-
-
-	if (dietValue) {
-		requestURL = requestURL + '&diet=' + dietValue;
+	constructor(adress){
+		this.adress = adress;
 	}
 
-	if (healthValue) {
-		requestURL = requestURL + '&health=' + healthValue;
-	}
-
-	if (c1Value) {
-		if (c2Value) {
-			cValue = c1Value + '-' + c2Value;
-		} else {
-			cValue = c1 + '+';
+	checkDiet(){
+		if (dietValue) {
+			this.adress += `&diet=${dietValue}`;
 		}
-	} else if (c2Value) {
-		cValue = c2 + '+';
 	}
 
-	if (cValue) {
-		requestURL = requestURL + '&calories=' + cValue;
-		console.log(cValue);
+	checkHealth(){
+		if (healthValue) {
+			this.adress += `&health=${healthValue}`;
+		}
 	}
 
+	checkCalories(){
+		if (cal2Value) {
+			calVal = cal2Value + '-';
+			if (cal1Value) {
+				calVal += cal1Value;
+			}
+		} else if (calVal) {
+			calVal = cal1Value;
+		}
 
-
-	request.open("GET", requestURL);
-
-	request.onload = function(){
-		console.log(JSON.parse(request.responseText));
-		listRecipes(JSON.parse(request.responseText).hits); 
-
-		var count = document.querySelector(".recipe-count-number");
-		count.textContent = JSON.parse(request.responseText).count;
+		if (calVal) {
+			this.adress += `&calories=${calVal}`;
+		}
 	}
 
-	request.send();
+	checkPaprameters(){
+		this.checkDiet();
+		this.checkHealth();
+		this.checkCalories();
+	}
 }
 
 
+const getRecipes = (searchValue) => {
 
+	let requestURL = new Url (`https://api.edamam.com/search?q=${searchValue}&app_id=${appId}&app_key=${appKey}&from=0&to=12`);
+	requestURL.checkPaprameters();
 
+	fetch(requestURL.adress)
+  	.then((response) => {
+    	return response.json();
+  	})
+  	.then((myJson) => {
+    	listRecipes(myJson.hits);
+    	let count = document.querySelector(".recipe-count-number");
+		myJson.count === 0 ? 
+		alert("No results found. Please type in some food name. *Pizza* for example!") : 
+		count.textContent = myJson.count;
+  	})
+  	.catch((error) => {
+	  alert(`Error: ${error}`);
+	});
 
-function listRecipes(recipes) {
+}
 
+const listRecipes = recipes => {
 	recipesSection.innerHTML = "";
-
-	recipes.forEach(function(recipe) {
-		addRecipe(recipe);
-	})
-
-	
+	recipes.forEach(recipe => addRecipe(recipe));
 }
 
+const addRecipe = recipeData => {	
+	let {image, label, calories, healthLabels} = recipeData.recipe;
 
+	let img = new Image(image);
+	let title = new Title(label)
+	let cals = new Calories(Math.round(calories/recipeData.recipe.yield));
+	let labels = new Labels();
 
-
-function addRecipe(recipeData) {	
-	var recipeElement = document.createElement("div");
-	recipeElement.classList.add("recipe-element");
-	var img = '<img src="' + recipeData.recipe.image +'">';
-	var title = '<h3>' + recipeData.recipe.label + '</h3>';
-
-	var calories = '<div class="calories">' +  Math.round(recipeData.recipe.calories / recipeData.recipe.yield) + '</div>';
-
-	var labels = '<div class="labels">';
-
-	var myLabels = recipeData.recipe.healthLabels;
-
-	myLabels.forEach((element)=> {
-		var label = '<div class="label">' + element +'</div>';
-		console.log(element)
-		labels += label;
+	healthLabels.forEach(element => {
+		let label = new Label(element);
+		labels.addLabel(label.content);
 	})
-	
-	labels.innerHTML ='</div>';
-
-	recipeElement.innerHTML = img + title + labels + calories;
-
-	recipesSection.appendChild(recipeElement);
-
+	let recipeElement = new Recipe(img.content + title.content + cals.content + labels.content);
+	recipesSection.innerHTML += recipeElement.content;
 }
-
-
 
 // init 
 
-var button = document.querySelector(".search-button");
+const button = document.querySelector(".search-button");
 
-calValues[0].onkeyup = function() {
-	window.c1Value = calValues[0].value;
-	console.log(c1Value);
-}
+calValues[0].onkeyup = () => cal1Value = calValues[0].value;
+calValues[1].onkeyup = () => cal1Value = calValues[1].value;
 
-calValues[1].onkeyup = function() {
-	window.c2Value = calValues[1].value;
-	console.log(c2Value);
-}
-
-searchFood.onkeyup = function() {
+searchFood.onkeyup = () => {
 	button.removeAttribute("disabled");
 	if (searchFood.value === "") {
 		button.setAttribute("disabled", true);
 	}
 	window.foodValue = searchFood.value;
-	console.log(foodValue);
 }
 
-diet.onchange = function() {
-	dietValue = diet.value;
-	console.log(dietValue);
-}
+diet.onchange = () => dietValue = diet.value;
 
-health.onchange = function() {
-	healthValue = health.value;
-	console.log(healthValue);
-}
 
-button.addEventListener("click", e=> {
-	console.log(e);
-	// onSearch();
-	getRecipes(foodValue);
-})
+health.onchange = () => healthValue = health.value;
+
+button.addEventListener("click", () => getRecipes(foodValue));
